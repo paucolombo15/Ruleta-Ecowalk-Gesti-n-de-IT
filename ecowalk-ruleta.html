@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EcoWalk · Girá y ganá</title>
+<style>
+:root{--bg:#eef1e6;--ink:#2f3a2c;--cobalt:#5f7f52;--sun:#d9b26f;--mint:#c9d8b6;--mint2:#e5ead8;--green:#a86a50;--paper:#fbfcf6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Avenir Next","Segoe UI",system-ui,sans-serif;display:flex;justify-content:center;padding:24px 16px 48px}
+main{width:100%;max-width:420px}
+h1{font-size:2.3rem;line-height:1;font-weight:800;letter-spacing:-.03em;margin:0 0 8px}
+.sub{margin:0 0 24px;max-width:34ch}
+.stage{position:relative;width:min(100%,340px);aspect-ratio:1;margin:0 auto 20px}
+#wheel{width:100%;height:100%;display:block;border-radius:50%;box-shadow:0 0 0 8px var(--ink);transition:transform 4.5s cubic-bezier(.12,.6,.1,1)}
+.pin{position:absolute;top:-14px;left:50%;width:0;height:0;transform:translateX(-50%);border:14px solid transparent;border-top:26px solid var(--sun);border-bottom:0;filter:drop-shadow(0 2px 0 var(--ink));z-index:2}
+.hub{position:absolute;inset:50% auto auto 50%;width:64px;height:64px;transform:translate(-50%,-50%);border-radius:50%;background:var(--paper);border:6px solid var(--ink);z-index:1}
+button{font:inherit;font-weight:700;border:2px solid var(--ink);border-radius:12px;padding:14px 18px;cursor:pointer;background:var(--sun);color:var(--ink);min-height:48px}
+button:hover:not(:disabled){background:#e4c283}
+button.ghost{background:transparent}
+button:disabled{opacity:.55;cursor:not-allowed}
+:focus-visible{outline:3px solid var(--cobalt);outline-offset:2px}
+#spin{width:100%;font-size:1.15rem;box-shadow:0 5px 0 var(--ink)}
+#spin:active:not(:disabled){transform:translateY(3px);box-shadow:0 2px 0 var(--ink)}
+form{margin-top:28px;background:var(--paper);border:2px solid var(--ink);border-radius:16px;padding:20px}
+form h2{margin:0 0 4px;font-size:1.25rem;letter-spacing:-.01em}
+form p{margin:0 0 14px;font-size:.92rem}
+label{display:block;font-weight:600;font-size:.9rem;margin:12px 0 4px}
+input,select{width:100%;font:inherit;padding:11px 12px;border:2px solid var(--ink);border-radius:10px;background:#fff;color:var(--ink);min-height:46px}
+.chk{display:flex;gap:10px;align-items:flex-start;font-weight:400;margin-top:16px}
+.chk input{width:22px;height:22px;min-height:0;margin-top:2px;flex:none}
+.err{color:#b3261e;font-size:.88rem;min-height:1.3em;margin:10px 0 0}
+form button{width:100%;margin-top:6px;background:var(--cobalt);color:#fff}
+.ok{display:none;background:var(--mint);border:2px solid var(--ink);border-radius:12px;padding:12px 14px;margin-top:16px;font-weight:600}
+dialog{border:3px solid var(--ink);border-radius:20px;padding:26px 22px;max-width:360px;width:calc(100% - 32px);background:var(--paper);color:var(--ink);text-align:center}
+dialog::backdrop{background:rgba(47,58,44,.6)}
+dialog h2{margin:0 0 6px;font-size:1.7rem;line-height:1.05;letter-spacing:-.02em}
+.code{display:inline-block;margin:12px 0;padding:10px 16px;border:2px dashed var(--ink);border-radius:10px;font:700 1.25rem ui-monospace,Menlo,monospace;letter-spacing:.06em;background:var(--mint2)}
+dialog .acts{display:grid;gap:10px;margin-top:8px}
+.note{font-size:.85rem;margin:0}
+@media (prefers-reduced-motion:reduce){#wheel{transition-duration:.5s}}
+</style>
+</head>
+<body>
+<main>
+  <h1>Girá y ganá con EcoWalk</h1>
+  <p class="sub">Zapatillas hechas con materiales reciclados. Registrate con tu mail de la facu y girá la ruleta: todos ganan algo.</p>
+
+  <div class="stage">
+    <div class="pin" aria-hidden="true"></div>
+    <canvas id="wheel" role="img" aria-label="Ruleta con 6 premios: 10% off, envío gratis, stickers, tote bag, medias ecológicas y zapatillas gratis"></canvas>
+    <div class="hub" aria-hidden="true"></div>
+  </div>
+  <button id="spin" type="button">Girar la ruleta</button>
+
+  <form id="reg" novalidate>
+    <h2>Registrate para girar</h2>
+    <p>Solo 3 datos y girás al toque.</p>
+    <label for="nombre">Tu nombre</label>
+    <input id="nombre" name="nombre" autocomplete="given-name" required>
+    <label for="email">Mail de la facu</label>
+    <input id="email" name="email" type="email" inputmode="email" autocapitalize="off" autocomplete="email" placeholder="nombre@universidad.edu.ar" required>
+    <label for="talle">Tu talle</label>
+    <select id="talle" name="talle" required>
+      <option value="">Elegí tu talle</option>
+    </select>
+    <label class="chk"><input id="bases" type="checkbox"> <span>Acepto las bases y condiciones y quiero recibir mi premio y novedades de EcoWalk por mail.</span></label>
+    <p class="err" id="err" role="alert"></p>
+    <button type="submit">Registrarme y girar</button>
+    <div class="ok" id="ok" role="status"></div>
+  </form>
+</main>
+
+<dialog id="res" aria-labelledby="resT">
+  <p class="note" id="resPre">¡Te tocó!</p>
+  <h2 id="resT"></h2>
+  <div class="code" id="code"></div>
+  <p class="note">Usalo en tu compra. Vence en 7 días.</p>
+  <div class="acts">
+    <button id="copy" type="button">Copiar cupón</button>
+    <button id="extra" class="ghost" type="button">Etiquetá a tu grupo y girá otra vez</button>
+    <button id="close" class="ghost" type="button">Cerrar</button>
+  </div>
+</dialog>
+
+<script>
+/* ===== Configuración: cambiá premios y pesos (probabilidad) acá ===== */
+const PREMIOS = [
+  {t:"10% OFF",       d:"10% de descuento en tu primer par", w:35, c:"#5f7f52", tx:"#fff"},
+  {t:"Envío gratis",  d:"Envío gratis en tu primer pedido",  w:25, c:"#c9d8b6", tx:"#2f3a2c"},
+  {t:"Stickers",      d:"Pack de stickers EcoWalk",          w:20, c:"#d9c3a0", tx:"#2f3a2c"},
+  {t:"Tote bag",      d:"Tote bag EcoWalk",                  w:10, c:"#7a5c45", tx:"#fff"},
+  {t:"Medias eco",    d:"Un par de medias ecológicas",       w:7,  c:"#a9b98a", tx:"#2f3a2c"},
+  {t:"¡Zapas gratis!",d:"¡Un par de zapatillas EcoWalk gratis!", w:3, c:"#a86a50", tx:"#fff"}
+];
+const IDX_ZAPAS = 5, MAX_ZAPAS_SEMANA = 1, DURACION = 4500;
+
+/* ===== Utilidades ===== */
+const $ = id => document.getElementById(id);
+const store = {
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+};
+const semana = Math.floor(Date.now()/6048e5);
+const mem = {};
+let rot = 0, girando = false, giros = 0, extraUsado = false, lead = null, premioActual = null;
+
+/* ===== Talles ===== */
+for(let n=35;n<=45;n++){ const o=document.createElement("option"); o.value=o.textContent=n; $("talle").appendChild(o); }
+
+/* ===== Dibujo de la ruleta ===== */
+const cv = $("wheel"), ctx = cv.getContext("2d");
+function dibujar(){
+  const s = cv.clientWidth, dpr = window.devicePixelRatio || 1;
+  cv.width = cv.height = Math.round(s*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const r = s/2, a = 2*Math.PI/PREMIOS.length;
+  PREMIOS.forEach((p,i)=>{
+    const a0 = -Math.PI/2 + i*a;
+    ctx.beginPath(); ctx.moveTo(r,r); ctx.arc(r,r,r,a0,a0+a); ctx.closePath();
+    ctx.fillStyle = p.c; ctx.fill();
+    ctx.strokeStyle = "#fbfcf6"; ctx.lineWidth = 3; ctx.stroke();
+    ctx.save(); ctx.translate(r,r); ctx.rotate(a0+a/2);
+    ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.fillStyle = p.tx;
+    ctx.font = "800 "+Math.round(s*0.052)+"px 'Avenir Next','Segoe UI',system-ui,sans-serif";
+    ctx.fillText(p.t, r - s*0.06, 0);
+    ctx.restore();
+  });
+}
+dibujar(); addEventListener("resize", dibujar);
+
+/* ===== Lógica de giro ===== */
+function elegir(){
+  const total = PREMIOS.reduce((s,p)=>s+p.w,0);
+  let n = Math.random()*total;
+  for(let i=0;i<PREMIOS.length;i++){ n -= PREMIOS[i].w; if(n<0) return i; }
+  return 0;
+}
+function zapasEntregadas(){ return +(store.get("ecowalk_zapas_"+semana) || mem.z || 0); }
+function actualizarBoton(){
+  $("spin").textContent = lead ? (giros>0 ? "Girar la ruleta" : "Sin giros disponibles") : "Girar la ruleta";
+  $("spin").disabled = girando || (lead && giros<1);
+}
+$("spin").addEventListener("click", ()=>{
+  if(!lead){
+    $("err").textContent = "Registrate primero para poder girar.";
+    $("nombre").focus(); $("reg").scrollIntoView({behavior:"smooth",block:"center"});
+    return;
+  }
+  if(girando || giros<1) return;
+  girando = true; giros--; actualizarBoton();
+  let i = elegir();
+  const sinZapas = i===IDX_ZAPAS && zapasEntregadas() >= MAX_ZAPAS_SEMANA;
+  if(sinZapas){ i = IDX_ZAPAS; }
+  const a = 360/PREMIOS.length;
+  const centro = i*a + a/2 + (Math.random()-.5)*a*.6;
+  const actual = ((rot%360)+360)%360;
+  rot += 360*5 + (((360-centro-actual)%360)+360)%360;
+  cv.style.transform = "rotate("+rot+"deg)";
+  const dur = matchMedia("(prefers-reduced-motion:reduce)").matches ? 550 : DURACION;
+  setTimeout(()=>{ girando = false; mostrar(i, sinZapas); }, dur+100);
+});
+
+function mostrar(i, sinZapas){
+  const p = PREMIOS[i];
+  if(sinZapas){
+    giros++; actualizarBoton();
+    $("resPre").textContent = "Uy, casi";
+    $("resT").textContent = "Las zapas de esta semana ya se entregaron. ¡Girá de nuevo!";
+    $("code").style.display = "none"; $("copy").style.display = "none"; $("extra").style.display = "none";
+  } else {
+    if(i===IDX_ZAPAS){ const n = zapasEntregadas()+1; mem.z = n; store.set("ecowalk_zapas_"+semana, n); }
+    premioActual = {premio:p.d, cupon:"ECO-"+Math.random().toString(36).slice(2,7).toUpperCase(), fecha:new Date().toISOString()};
+    guardarGiro(premioActual);
+    $("resPre").textContent = "¡Te tocó!";
+    $("resT").textContent = p.d;
+    $("code").textContent = premioActual.cupon;
+    $("code").style.display = ""; $("copy").style.display = "";
+    $("copy").textContent = "Copiar cupón";
+    $("extra").style.display = extraUsado ? "none" : "";
+  }
+  actualizarBoton();
+  $("res").showModal();
+}
+$("copy").addEventListener("click", async ()=>{
+  try{ await navigator.clipboard.writeText(premioActual.cupon); $("copy").textContent = "Cupón copiado"; }
+  catch(e){ $("copy").textContent = "Copialo a mano: "+premioActual.cupon; }
+});
+$("extra").addEventListener("click", ()=>{ extraUsado = true; giros++; $("res").close(); actualizarBoton(); });
+$("close").addEventListener("click", ()=>$("res").close());
+
+/* ===== Registro ===== */
+$("reg").addEventListener("submit", e=>{
+  e.preventDefault();
+  const f = new FormData(e.target), err = $("err");
+  const nombre=f.get("nombre").trim(), email=f.get("email").trim().toLowerCase(), talle=f.get("talle");
+  if(!nombre || !talle){ err.textContent = "Completá tu nombre y tu talle."; return; }
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ err.textContent = "Revisá el mail: falta algo."; return; }
+  if(!/@[^@]*(edu|ac\.)/.test(email)){ err.textContent = "Usá tu mail institucional, el que termina en .edu.ar."; return; }
+  if(!$("bases").checked){ err.textContent = "Aceptá las bases y condiciones para participar."; return; }
+  err.textContent = "";
+  lead = {nombre, email, uni:email.split("@")[1], talle, consentimiento:true, fecha:new Date().toISOString()};
+  giros = 1;
+  guardarLead(lead);
+  $("ok").style.display = "block";
+  $("ok").textContent = "¡Listo, "+nombre.split(" ")[0]+"! Girando tu ruleta…";
+  $("reg").querySelector("button[type=submit]").disabled = true;
+  actualizarBoton(); window.scrollTo({top:0,behavior:"smooth"});
+  $("spin").click();
+});
+
+/* ===== Conexión con tu backend (reemplazá estos dos) ===== */
+function guardarLead(l){ console.log("LEAD", l); /* fetch("/api/leads",{method:"POST",body:JSON.stringify(l)}) */ }
+function guardarGiro(g){ console.log("GIRO", {email:lead.email, ...g}); /* fetch("/api/giros",{method:"POST",body:JSON.stringify(g)}) */ }
+actualizarBoton();
+</script>
+</body>
+</html>
